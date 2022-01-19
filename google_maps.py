@@ -122,9 +122,9 @@ def extractUniforms(constants, refMatrix):
             ) @ Matrix.Scale(500, 4)
     elif '_i' in globUniforms:
         # Google Chrome 85.0.4183.121 (64bit), RendorDoc 1.9, RTX 3090, https://smap.seoul.go.kr/
-        uvOffsetScale = [0, 0, 1/65535., 1/65535.]
+        uvOffsetScale = [0, 0, 1, 1]
         matrix = makeMatrix(globUniforms['_i'])
-        postMatrix = Matrix.Scale(3, 4, Vector((1.0, 0., 0.)))
+        postMatrix = Matrix.Scale(-1, 4, Vector((1, 0., 0.)))
     elif '_f' in globUniforms:
         # Google Chrome 85.0.4183.121 (64bit), RendorDoc 1.9, RTX 3090, https://smap.seoul.go.kr/
         uvOffsetScale = [0, 0, 1, 1]
@@ -141,14 +141,15 @@ def extractUniforms(constants, refMatrix):
             return None, None, None
     
     if refMatrix is None:
-        if '_f' in globUniforms or '_i' in globUniforms:
-            # Rotate around Z, upside down for SMAP
+        if '_i' in globUniforms or '_f' in globUniforms:
+             # Rotate around Z, upside down for SMAP
             refMatrix = Matrix.Rotation(-pi, 4, 'Z') @ matrix.inverted()
         else:
             # Rotate around Y because Google Maps uses X as up axis
             refMatrix = Matrix.Rotation(-pi/2, 4, 'Y') @ matrix.inverted()
     matrix = refMatrix @ matrix
 
+    
     if postMatrix is not None:
         matrix = postMatrix @ matrix
 

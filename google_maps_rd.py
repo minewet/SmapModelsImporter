@@ -203,6 +203,7 @@ class CaptureScraper():
             try:
                 if len(meshes)<2:
                     continue
+                
                 if len(meshes) == 2: 
                 # Position
                     m = meshes[0]
@@ -212,16 +213,20 @@ class CaptureScraper():
                         pickle.dump(indices, file)
                     unpacked = m.fetchData(controller)
                     for i in range(len(unpacked)):
-                        unpacked[i]=(unpacked[i][0], unpacked[i][1], 0, 1)
+                        unpacked[i]=(unpacked[i][0]/64, 1-unpacked[i][1]/64, 0, 1)
                     with open("{}{:05d}-positions.bin".format(FILEPREFIX, drawcallId), 'wb') as file:
                         pickle.dump(unpacked, file)
 
                     # UV
-                    m = meshes[1]
+                    m = meshes[0]
                     m.fetchTriangle(controller)
                     unpacked = m.fetchData(controller)
+                    for i in range(len(unpacked)):
+                        unpacked[i]=(unpacked[i][0]/64, unpacked[i][1]/64)
                     with open("{}{:05d}-uv.bin".format(FILEPREFIX, drawcallId), 'wb') as file:
                         pickle.dump(unpacked, file)
+                    meshtype= "terrain"
+                
                     
                 if len(meshes) == 3:
                     #Position
@@ -240,17 +245,16 @@ class CaptureScraper():
                     m = meshes[1]
                     m.fetchTriangle(controller)
                     unpacked_u = m.fetchData(controller)
-
                     m = meshes[2]
                     m.fetchTriangle(controller)
                     unpacked_v = m.fetchData(controller)
-
                     unpacked = [0] * len(unpacked_u)
                     for i in range(len(unpacked_u)):
-                        unpacked[i] = (unpacked_u[i][0], unpacked_v[i][0])
-                        
+                        unpacked[i] = (unpacked_u[i][0], unpacked_v[i][0])                        
                     with open("{}{:05d}-uv.bin".format(FILEPREFIX, drawcallId), 'wb') as file:
-                        pickle.dump(unpacked, file)         
+                        pickle.dump(unpacked, file)
+                    meshtype= "building"
+
             except Exception as err:
                 print("(Skipping: {})".format(err))
                 continue
@@ -261,7 +265,11 @@ class CaptureScraper():
             bindpoints = state.GetBindpointMapping(rd.ShaderStage.Fragment)
             if len(bindpoints.samplers) > 1:
                 capture_type = 'SeoulMap'
-                texture_bind = bindpoints.samplers[0].bind
+                if meshtype=="terrain":
+                    texture_bind = bindpoints.samplers[2].bind
+                elif meshtype=="building":
+                    texture_bind = bindpoints.samplers[0].bind
+                
             else:
                 texture_bind = bindpoints.samplers[-1].bind
             resources = state.GetReadOnlyResources(rd.ShaderStage.Fragment)
