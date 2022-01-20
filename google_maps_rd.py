@@ -115,41 +115,9 @@ class CaptureScraper():
         last_call = "glDrawArrays(4)"
         drawcall_prefix = "glDrawElements"
         min_drawcall = 0
-        capture_type = "Google Maps"
+        capture_type = "SMAP"
         if _strategy == 0:
-            first_call = "glClear(Color = <0.000000, 0.000000, 0.000000, 1.000000>, Depth = <1.000000>)"
-        elif _strategy == 1:
-            first_call = "glClear(Color = <0.000000, 0.000000, 0.000000, 1.000000>, Depth = <1.000000>, Stencil = <0x00>)"
-        elif _strategy == 2:
-            first_call = "glClear(Color = <0.000000, 0.000000, 0.000000, 1.000000>, Depth = <0.000000>)"
-        elif _strategy == 3:
-            first_call = "glClear(Color = <0.000000, 0.000000, 0.000000, 1.000000>, Depth = <0.000000>, Stencil = <0x00>)"
-        elif _strategy == 4:
-            first_call = ""
-            last_call = "ClearDepthStencilView"
-            drawcall_prefix = "DrawIndexed"
-            capture_type = "Mapy CZ"
-        elif _strategy == 5:
-            # With Google Earth there are two batches of DrawIndexed calls, we are interested in the second one
-            first_call = "DrawIndexed"
-            last_call = ""
-            drawcall_prefix = "DrawIndexed"
-            capture_type = "Google Earth"
-            skipped_drawcalls, min_drawcall = self.findDrawcallBatch(drawcalls, first_call, drawcall_prefix, last_call)
-            if not skipped_drawcalls or not self.hasUniform(skipped_drawcalls[0], "_uProjModelviewMatrix"):
-                first_call = "INVALID CASE, SKIP ME"
-        elif _strategy == 6:
-            # Actually sometimes there's only one batch
-            first_call = "DrawIndexed"
-            last_call = ""
-            drawcall_prefix = "DrawIndexed"
-            capture_type = "Google Earth (single)"
-        elif _strategy == 7:
             first_call = "ClearRenderTargetView(0.000000, 0.000000, 0.000000"
-            last_call = "Draw(4)"
-            drawcall_prefix = "DrawIndexed"
-        elif _strategy == 8:
-            first_call = "" # Try from the beginning on
             last_call = "Draw(4)"
             drawcall_prefix = "DrawIndexed"
         else:
@@ -165,15 +133,6 @@ class CaptureScraper():
         
         if not relevant_drawcalls:
             return self.extractRelevantCalls(drawcalls, _strategy=_strategy+1)
-
-        if capture_type == "Mapy CZ" and not self.hasUniform(relevant_drawcalls[0], "_uMV"):
-            return self.extractRelevantCalls(drawcalls, _strategy=_strategy+1)
-
-        if capture_type == "Google Earth (single)":
-            if not self.hasUniform(relevant_drawcalls[0], "_uMeshToWorldMatrix"):
-                return self.extractRelevantCalls(drawcalls, _strategy=_strategy+1)
-            else:
-                capture_type = "Google Earth"
 
         return relevant_drawcalls, capture_type
 
@@ -198,7 +157,7 @@ class CaptureScraper():
             vbs = state.GetVBuffers()
             attrs = state.GetVertexInputs()
             meshes = [makeMeshData(attr, ib, vbs, draw) for attr in attrs]
-            
+            constants = self.getVertexShaderConstants(draw, state=state)
 
             try:
                 if len(meshes)<2:
@@ -212,8 +171,21 @@ class CaptureScraper():
                     with open("{}{:05d}-indices.bin".format(FILEPREFIX, drawcallId), 'wb') as file:
                         pickle.dump(indices, file)
                     unpacked = m.fetchData(controller)
+
+                    bindpoints_vs = state.GetBindpointMapping(rd.ShaderStage.Vertex)
+                    texture_bind_vs = bindpoints_vs.samplers[0].bind
+                    resources_vs = state.GetReadOnlyResources(rd.ShaderStage.Vertex)
+                    rid_vs = resources_vs[texture_bind_vs].resources[0].resourceId
+                    sr = rd.Subresource()
+                    sr.mip=0
                     for i in range(len(unpacked)):
-                        unpacked[i]=(unpacked[i][0]/64, 1-unpacked[i][1]/64, 0, 1)
+                        x = unpacked[i][0]+constants['$Globals']['_h'][0]
+                        y = unpacked[i][1]+constants['$Globals']['_h'][1]
+                        rgba= controller.PickPixel(rid_vs, int(x),int(y), sr, rd.CompType.Float).floatValue
+                        z = (256*(240*rgba[0]+15*rgba[1]) + 240*rgba[2]+15*rgba[3])*0.0625 #vertex debugging 해석 결과 vs[0]에 대해 다음과 같이 z좌표 대입
+                        unpacked[i]=(unpacked[i][0]/64, unpacked[i][1]/64, z/64/5, 1)
+
+                    # print(unpacked)
                     with open("{}{:05d}-positions.bin".format(FILEPREFIX, drawcallId), 'wb') as file:
                         pickle.dump(unpacked, file)
 
@@ -222,7 +194,7 @@ class CaptureScraper():
                     m.fetchTriangle(controller)
                     unpacked = m.fetchData(controller)
                     for i in range(len(unpacked)):
-                        unpacked[i]=(unpacked[i][0]/64, unpacked[i][1]/64)
+                        unpacked[i]=(unpacked[i][0]/64, 1-unpacked[i][1]/64)
                     with open("{}{:05d}-uv.bin".format(FILEPREFIX, drawcallId), 'wb') as file:
                         pickle.dump(unpacked, file)
                     meshtype= "terrain"
@@ -234,7 +206,6 @@ class CaptureScraper():
                     m.fetchTriangle(controller)
                     unpacked = m.fetchData(controller)
                     if len(unpacked[0])<4: continue
-                    print("position "+str(len(unpacked[0])))
                     with open("{}{:05d}-positions.bin".format(FILEPREFIX, drawcallId), 'wb') as file:
                         pickle.dump(unpacked, file)
                     indices = m.fetchIndices(controller)
@@ -279,14 +250,13 @@ class CaptureScraper():
             shader = state.GetShader(rd.ShaderStage.Vertex)
             ep = state.GetShaderEntryPoint(rd.ShaderStage.Vertex)
             ref = state.GetShaderReflection(rd.ShaderStage.Vertex)
-            constants = self.getVertexShaderConstants(draw, state=state)
             constants["DrawCall"] = {
                 "topology": 'TRIANGLE_STRIP' if draw.topology == rd.Topology.TriangleStrip else 'TRIANGLES',
                 "type": capture_type
             }
             with open("{}{:05d}-constants.bin".format(FILEPREFIX, drawcallId), 'wb') as file:
                 pickle.dump(constants, file)
-            
+               
             texsave = rd.TextureSave()
             texsave.resourceId = rid
             texsave.mip = 0
@@ -294,6 +264,7 @@ class CaptureScraper():
             texsave.alpha = rd.AlphaMapping.Preserve
             texsave.destType = rd.FileType.PNG
             controller.SaveTexture(texsave, "{}{:05d}-texture.png".format(FILEPREFIX, drawcallId))
+
 
 def main(controller):
     scraper = CaptureScraper(controller)

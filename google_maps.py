@@ -89,38 +89,7 @@ def extractUniforms(constants, refMatrix):
     # Extract constants, which have different names depending on the browser/GPU driver
     globUniforms = constants['$Globals']
     postMatrix = None
-    if '_w' in globUniforms and '_s' in globUniforms:
-        [ou, ov, su, sv] = globUniforms['_w']
-        ov -= 1.0 / sv
-        sv = -sv
-        uvOffsetScale = [ou, ov, su, sv]
-        matrix = makeMatrix(globUniforms['_s'])
-    elif 'webgl_fa7f624db8ab37d1' in globUniforms and 'webgl_3c7b7f37a9bd4c1d' in globUniforms:
-        uvOffsetScale = globUniforms['webgl_fa7f624db8ab37d1']
-        matrix = makeMatrix(globUniforms['webgl_3c7b7f37a9bd4c1d'])
-    elif '_webgl_fa7f624db8ab37d1' in globUniforms and '_webgl_3c7b7f37a9bd4c1d' in globUniforms:
-        [ou, ov, su, sv] = globUniforms['_webgl_fa7f624db8ab37d1']
-        ov -= 1.0 / sv
-        sv = -sv
-        uvOffsetScale = [ou, ov, su, sv]
-        matrix = makeMatrix(globUniforms['_webgl_3c7b7f37a9bd4c1d'])
-    elif '_uMeshToWorldMatrix' in globUniforms:
-        # Google Earth
-        uvOffsetScale = [0, -1, 1, -1]
-        matrix = makeMatrix(globUniforms['_uMeshToWorldMatrix'])
-        matrix[3] = [0, 0, 0, 1]
-        #matrix = makeMatrix(globUniforms['_uModelviewMatrix']) @ matrix
-    elif '_uMV' in globUniforms:
-        # Mapy CZ
-        uvOffsetScale = [0, -1, 1, -1]
-        matrix = makeMatrix(globUniforms['_uMV'])
-        postMatrix = Matrix(
-            ((0.682889997959137, 0.20221230387687683, 0.7019768357276917, -0.06431722640991211),
-            (0.07228320091962814, 0.9375065565109253, -0.3403771221637726, -0.11041564494371414),
-            (-0.7269363403320312, 0.28318125009536743, 0.6255972981452942, -1.349690556526184),
-            (0.0, 0.0, 0.0, 1.0))
-            ) @ Matrix.Scale(500, 4)
-    elif '_i' in globUniforms:
+    if '_i' in globUniforms:
         # Google Chrome 85.0.4183.121 (64bit), RendorDoc 1.9, RTX 3090, https://smap.seoul.go.kr/
         uvOffsetScale = [0, 0, 1, 1]
         matrix = makeMatrix(globUniforms['_i'])
@@ -141,12 +110,8 @@ def extractUniforms(constants, refMatrix):
             return None, None, None
     
     if refMatrix is None:
-        if '_i' in globUniforms or '_f' in globUniforms:
-             # Rotate around Z, upside down for SMAP
-            refMatrix = Matrix.Rotation(-pi, 4, 'Z') @ matrix.inverted()
-        else:
-            # Rotate around Y because Google Maps uses X as up axis
-            refMatrix = Matrix.Rotation(-pi/2, 4, 'Y') @ matrix.inverted()
+        # Rotate around Z, upside down for SMAP
+        refMatrix = Matrix.Rotation(-pi, 4, 'Z') @ matrix.inverted()
     matrix = refMatrix @ matrix
 
     
@@ -241,20 +206,15 @@ def filesToBlender(context, prefix, max_blocks=200):
         else:
             tris = [ [ indices[3*i+j] for j in range(3) ] for i in range(n//3) ]
 
-        if constants["DrawCall"]["type"] == 'Google Maps':
-            verts = [ [ p[0] * 256.0, p[1] * 256.0, p[2] * 256.0 ] for p in positions ]
-        else:
-            verts = [ [ p[0], p[1], p[2] ] for p in positions ]
+        verts = [ [ p[0], p[1], p[2] ] for p in positions ] 
 
         [ou, ov, su, sv] = uvOffsetScale
         if uvs and len(uvs[0]) > 2:
             print(f"uvs[0][2] = {uvs[0][2]}")
             uvs = [u[:2] for u in uvs]
 
-        if constants["DrawCall"]["type"] == 'Google Maps':
-            uvs = [ [ (floor(u * 65535.0 + 0.5) + ou) * su, (floor(v * 65535.0 + 0.5) + ov) * sv ] for u, v in uvs ]
-        else:
-            uvs = [ [ (u + ou) * su, (v + ov) * sv ] for u, v in uvs ]
+        uvs = [ [ (u + ou) * su, (v + ov) * sv ] for u, v in uvs ]
+            
 
         if len(indices) == 0:
             continue
