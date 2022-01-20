@@ -163,6 +163,7 @@ class CaptureScraper():
                 if len(meshes)<2:
                     continue
                 
+                # terrain
                 if len(meshes) == 2: 
                 # Position
                     m = meshes[0]
@@ -172,6 +173,7 @@ class CaptureScraper():
                         pickle.dump(indices, file)
                     unpacked = m.fetchData(controller)
 
+                    #get height value from texture vs[0]
                     bindpoints_vs = state.GetBindpointMapping(rd.ShaderStage.Vertex)
                     texture_bind_vs = bindpoints_vs.samplers[0].bind
                     resources_vs = state.GetReadOnlyResources(rd.ShaderStage.Vertex)
@@ -182,8 +184,8 @@ class CaptureScraper():
                         x = unpacked[i][0]+constants['$Globals']['_h'][0]
                         y = unpacked[i][1]+constants['$Globals']['_h'][1]
                         rgba= controller.PickPixel(rid_vs, int(x),int(y), sr, rd.CompType.Float).floatValue
-                        z = (256*(240*rgba[0]+15*rgba[1]) + 240*rgba[2]+15*rgba[3])*0.0625 #vertex debugging 해석 결과 vs[0]에 대해 다음과 같이 z좌표 대입
-                        unpacked[i]=(unpacked[i][0]/64, unpacked[i][1]/64, z/64/5, 1)
+                        z = (256*(240*rgba[0]+15*rgba[1]) + 240*rgba[2]+15*rgba[3])*0.0625  #get by vertex debugging
+                        unpacked[i]=(unpacked[i][0]/64, unpacked[i][1]/64, z/64*0.21, 1)
 
                     # print(unpacked)
                     with open("{}{:05d}-positions.bin".format(FILEPREFIX, drawcallId), 'wb') as file:
@@ -199,7 +201,7 @@ class CaptureScraper():
                         pickle.dump(unpacked, file)
                     meshtype= "terrain"
                 
-                    
+                #building
                 if len(meshes) == 3:
                     #Position
                     m = meshes[0]
@@ -232,7 +234,6 @@ class CaptureScraper():
 
 
             # Texture
-            # dirty
             bindpoints = state.GetBindpointMapping(rd.ShaderStage.Fragment)
             if len(bindpoints.samplers) > 1:
                 capture_type = 'SeoulMap'
