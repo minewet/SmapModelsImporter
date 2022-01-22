@@ -17,6 +17,7 @@ __사용방법__
 
 https://github.com/eliemichel/MapsModelsImporter 과 동일하므로 자세한 사항은 참고 바람.<br>
 ! top-view로 움직이면서 캡쳐하지 않으면 지형 및 텍스쳐 맵핑이 이상하게 되는 오류가 있음. 주의
+! z축 스케일링을 상수로 했는데 캡쳐마다 알맞는 경우도 있고 안맞는 경우도 있어서.. S-MAP과 비교하여 z축 스케일 조정 필요 
 
 ## Environment
 ! 다른 환경에서는 잘 작동하지 않을 수 있음
@@ -41,7 +42,6 @@ Mesh viewer상의 데이터 개수가 다를 경우 적용 불가.
 
 
 ## preview
-![ewha](https://user-images.githubusercontent.com/71055964/150371818-66ca1909-96c1-4e8f-89b4-8287ca0f7da9.png)
-![광화문](https://user-images.githubusercontent.com/71055964/150371841-49454a05-31f8-43a4-8f0b-07a44de33836.png)
-![peace](https://user-images.githubusercontent.com/71055964/150371835-feb0c2ff-e467-4bf9-9fc0-8f2dc7543e06.png)
-
+![ewha](https://user-images.githubusercontent.com/71055964/150625647-12d6eada-d240-4850-8118-c47896faa739.png)
+![광화문](https://user-images.githubusercontent.com/71055964/150625645-37dc811a-4d8b-4ae4-8a1a-bc45ea5728a3.png)
+![peace](https://user-images.githubusercontent.com/71055964/150625643-025d121a-8c33-4317-9642-8ce92c11a7c0.png)
