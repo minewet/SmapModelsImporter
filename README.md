@@ -4,9 +4,6 @@ Blender addon to import models(building/terrain) from S-MAP: http://smap.seoul.g
 ## Original Code
 https://github.com/eliemichel/MapsModelsImporter 의 코드를 참고 및 수정해서 만들었음. (구글맵, 구글어스 등에 적용)
 
-+) https://github.com/minostauros/MapsModelsImporter/tree/seoulmap 코드도 참고함 <br>(s-map용으로 작성되었으나, 내 컴퓨터에서는 불러올 수 없었음)<br>
-
-
 ## Info
 S-Map에만 적용됨. 구글맵, 구글 어스 등 다 적용 안됨<br>
 <br>
